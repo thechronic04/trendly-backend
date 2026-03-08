@@ -1,0 +1,80 @@
+services:
+  # --- 1. THE MAIN API GATEWAY (FASTAPI) ---
+  api:
+    build: .
+    container_name: trendly_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - DB_NAME=trendly_db
+      - MONGO_URI=mongodb://mongo:27017
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - mongo
+      - redis
+    networks:
+      - trendly_network
+
+  # --- 2. THE AI WORKER ENGINE (CELERY) ---
+  worker:
+    build: .
+    container_name: trendly_worker
+    command: celery -A worker.tasks.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    networks:
+      - trendly_network
+
+  # --- 3. THE DATABASES & CACHE ---
+  db:
+    image: postgres:16-alpine
+    container_name: trendly_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=trendly_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - trendly_network
+
+  mongo:
+    image: mongo:latest
+    container_name: trendly_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - trendly_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: trendly_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - trendly_network
+
+networks:
+  trendly_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data:
