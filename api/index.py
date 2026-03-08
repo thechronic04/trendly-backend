@@ -1,58 +1,27 @@
 import os
-import ssl
 import random
-from fastapi import FastAPI, Depends
+import httpx
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-# --- DATABASE ---
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+# --- SUPABASE REST API CONFIG ---
+SUPABASE_URL = "https://yzpodrfyssnmxbqzeuwk.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cG9kcmZ5c3NubXhicXpldXdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NjU5OTMsImV4cCI6MjA4ODU0MTk5M30.2fIlXmAK4SiwPfLe8kBQrHyLvAq5lDoop42l-HXKWyM"
 
-# Use pg8000 (pure Python) — works on Vercel serverless
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+pg8000://", 1)
-elif DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
 
-# Use port 6543 (Supabase connection pooler) for serverless compatibility
-DATABASE_URL = DATABASE_URL.replace(":5432/", ":6543/")
-
-# Add sslmode=require for Supabase
-if "?" not in DATABASE_URL:
-    DATABASE_URL += "?sslmode=require"
-
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"ssl_context": ssl_context},
-    pool_pre_ping=True
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-class Product(Base):
-    __tablename__ = "products"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    brand = Column(String)
-    description = Column(String)
-    price = Column(Float)
-    currency = Column(String, default="USD")
-    category = Column(String)
-    sub_category = Column(String)
-    collection = Column(String)
-    image_url = Column(String)
-    affiliate_link = Column(String)
-    trend_score = Column(Float, default=0.0)
-    is_trending_now = Column(Boolean, default=False)
-    predicted_next_month = Column(Boolean, default=False)
-    momentum = Column(String)
-
+def query_supabase(table: str, filters: dict = None):
+    url = f"{SUPABASE_URL}/rest/v1/{table}?select=*"
+    if filters:
+        for key, value in filters.items():
+            url += f"&{key}=eq.{value}"
+    with httpx.Client() as client:
+        response = client.get(url, headers=HEADERS)
+        return response.json()
 
 # --- APP ---
 app = FastAPI(title="Trendly AI API", version="1.0.0")
@@ -68,41 +37,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 @app.get("/")
 def read_root():
     return {"message": "Trendly AI API is live! ✅"}
-
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
 @app.get("/api/products")
-def get_all_products(db: Session = Depends(get_db)):
-    return db.query(Product).all()
-
+def get_all_products():
+    return query_supabase("products")
 
 @app.get("/api/trends")
-def get_trending(db: Session = Depends(get_db)):
-    products = db.query(Product).filter(Product.is_trending_now == True).all()
+def get_trending():
+    products = query_supabase("products", {"is_trending_now": "true"})
     return {"trending": products}
 
-
 @app.get("/api/predictions")
-def get_predictions(db: Session = Depends(get_db)):
-    products = db.query(Product).filter(Product.predicted_next_month == True).all()
+def get_predictions():
+    products = query_supabase("products", {"predicted_next_month": "true"})
     return {"predicted_next_month": products}
-
 
 @app.get("/api/ai/analyze-trend")
 def analyze_trend(keyword: str):
