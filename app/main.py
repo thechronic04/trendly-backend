@@ -4,6 +4,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import auth, discovery, tracker
 from app.core.config import settings
+from app.core.speed_insights import setup_speed_insights
 
 # --- MAIN APP: PRODUCTION-READY FASTAPI INSTANCE ---
 
@@ -28,6 +29,9 @@ app.add_middleware(
 
 # Prometheus instrumentation for real-time performance tracking
 # Instrumentator().instrument(app).bootstrap()
+
+# Vercel Speed Insights integration
+setup_speed_insights(app)
 
 
 # --- MODULE REGISTRATION (ROUTERS) ---

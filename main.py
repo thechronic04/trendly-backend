@@ -3,10 +3,47 @@ import random
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+from typing import Callable
 
 import models
 
 app = FastAPI(title="Trendly AI B2C API", version="1.0.0")
+
+# Speed Insights middleware
+class SpeedInsightsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next: Callable) -> Response:
+        response = await call_next(request)
+        
+        if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
+            body = b""
+            async for chunk in response.body_iterator:
+                body += chunk
+            
+            try:
+                html = body.decode("utf-8")
+                script = '''
+<script>
+  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+'''
+                if "</body>" in html:
+                    html = html.replace("</body>", f"{script}</body>")
+                elif "</html>" in html:
+                    html = html.replace("</html>", f"{script}</html>")
+                
+                return Response(
+                    content=html.encode("utf-8"),
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+            except (UnicodeDecodeError, AttributeError):
+                pass
+        
+        return response
 
 # --- CORS CONFIGURATION ---
 # In development: FRONTEND_URL is not set, so we allow all origins.
@@ -25,6 +62,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Speed Insights middleware
+app.add_middleware(SpeedInsightsMiddleware)
 
 
 # --- DB DEPENDENCY ---
