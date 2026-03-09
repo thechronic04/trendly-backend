@@ -23,8 +23,12 @@ def query_supabase(table, filters=None, order=None):
 
 app = FastAPI(title="Trendly AI API", version="2.0.0")
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
-allowed_origins = [FRONTEND_URL, "https://trendly-frontend.vercel.app"] if FRONTEND_URL else ["*"]
+allowed_origins = [
+    "https://trendly-frontend-rwu8.vercel.app",
+    "https://trendly-frontend.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -84,3 +88,19 @@ def analyze_trend(keyword: str):
         "recommendation": "Promote heavily" if score > 85 else "Monitor closely",
         "predicted_surge": f"+{random.randint(10, 90)}% in next 7 days"
     }
+
+# --- NEW: AI Trending Products Endpoints ---
+
+@app.get("/api/trending-products")
+def get_all_trending_products():
+    products = query_supabase("trending_products", order="trend_score.desc")
+    if isinstance(products, list):
+        return products
+    return []
+
+@app.get("/api/trending-products/{category}")
+def get_category_trending_products(category: str):
+    products = query_supabase("trending_products", {"category": category}, order="trend_score.desc")
+    if isinstance(products, list):
+        return products
+    return []
