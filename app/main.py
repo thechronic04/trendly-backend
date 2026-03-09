@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import auth, discovery, tracker
+from app.routes.trends import trendingRoutes
 from app.core.config import settings
 
 # --- MAIN APP: PRODUCTION-READY FASTAPI INSTANCE ---
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Secure Auth"])
 app.include_router(discovery.router, prefix=f"{settings.API_V1_STR}/discovery", tags=["Discovery Engine"])
 app.include_router(tracker.router, prefix=f"{settings.API_V1_STR}/tracker", tags=["Neural Tracker"])
+app.include_router(trendingRoutes.router, prefix="/api", tags=["Trend Alerts"])
 
 
 @app.get("/health", tags=["Infrastructure"])
