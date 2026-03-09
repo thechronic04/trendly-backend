@@ -62,6 +62,24 @@ class Product(Base):
     affiliate_link = Column(String(2048))
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class TrendingProduct(Base):
+    """
+    SECTION 6 — DATABASE EXTENSION
+    Storage for dynamically generated AI trends.
+    """
+    __tablename__ = "trending_products"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(255), nullable=False)
+    category = Column(String(50))
+    trend_score = Column(Float, index=True)
+    growth_metric = Column(String(50))
+    image_url = Column(String(1024))
+    affiliate_link = Column(String(2048))
+    source_platform = Column(String(100))
+    ai_insight = Column(String(1024))  # Section 13: Optional AI Insight
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 # --- DATA VALIDATION & INDEX OPTIMIZATION ---
 
