@@ -18,14 +18,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "trendly-ai-prod-key-7728786271")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
-    - ALLOWED_CORS_ORIGINS: List[str] = ["http://localhost:3000", "https://trendly.ai"]
-+ ALLOWED_CORS_ORIGINS: List[str] = [
-+     "http://localhost:3000", 
-+     "https://trendly.ai",
-+     "https://trendly-frontend-rwu8.vercel.app",
-+     "http://localhost:5173"
-+ ]
-
+    ALLOWED_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000", 
+        "https://trendly.ai",
+        "https://trendly-frontend-rwu8.vercel.app",
+        "http://localhost:5173"
+    ]
     
     # Relational Database (SQLite for local, switch to PostgreSQL for Production)
     # Using async sqlite driver
@@ -50,4 +48,3 @@ class Settings(BaseSettings):
 
 # Instantiate global settings
 settings = Settings()
-
