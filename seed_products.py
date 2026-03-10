@@ -1,12 +1,13 @@
 import models
 
-
 def seed():
+    # Initialize Database
     models.init_db()
     db = models.SessionLocal()
 
+    # Clear existing data just in case
     db.query(models.Product).delete()
-
+    
     products_data = [
         {
             "name": "Oversized Vintage Leather Moto Jacket",
@@ -21,7 +22,7 @@ def seed():
             "trend_score": 95.8,
             "is_trending_now": True,
             "predicted_next_month": True,
-            "momentum": "+24% 7d",
+            "momentum": "+24% 7d"
         },
         {
             "name": "Premium Cotton Oxford Shirt",
@@ -36,7 +37,7 @@ def seed():
             "trend_score": 87.5,
             "is_trending_now": True,
             "predicted_next_month": False,
-            "momentum": "Steady",
+            "momentum": "Steady"
         },
         {
             "name": "Urban Minimalist Tech Shorts",
@@ -51,7 +52,7 @@ def seed():
             "trend_score": 91.2,
             "is_trending_now": True,
             "predicted_next_month": True,
-            "momentum": "+15% 7d",
+            "momentum": "+15% 7d"
         },
         {
             "name": "Oversized Streetwear Hoodie",
@@ -66,7 +67,7 @@ def seed():
             "trend_score": 98.4,
             "is_trending_now": True,
             "predicted_next_month": True,
-            "momentum": "+64% 7d",
+            "momentum": "+64% 7d"
         },
         {
             "name": "Soft Pinch Liquid Blush",
@@ -74,14 +75,14 @@ def seed():
             "description": "Insanely pigmented and viral blush. A staple for the 'Clean Girl' aesthetic.",
             "price": 2499.00,
             "category": "makeup",
-            "sub_category": "Blush",
+            "sub_category": "Tops",
             "collection": "Self Care",
             "image_url": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80",
             "affiliate_link": "https://www.nykaa.com/",
             "trend_score": 98.2,
             "is_trending_now": True,
             "predicted_next_month": True,
-            "momentum": "+45% 7d",
+            "momentum": "+45% 7d"
         },
         {
             "name": "Cherry Glow Lip Oil",
@@ -89,24 +90,23 @@ def seed():
             "description": "High-shine luxury lip oil matching the upcoming cherry red fashion trend.",
             "price": 4200.00,
             "category": "makeup",
-            "sub_category": "Lips",
+            "sub_category": "Jewelry",
             "collection": "Essentials",
             "image_url": "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=800&q=80",
             "affiliate_link": "https://www.nykaa.com/",
             "trend_score": 99.1,
             "is_trending_now": True,
             "predicted_next_month": True,
-            "momentum": "+80% 7d",
-        },
+            "momentum": "+80% 7d"
+        }
     ]
 
     for p_data in products_data:
-        db.add(models.Product(**p_data))
-
+        product = models.Product(**p_data)
+        db.add(product)
+    
     db.commit()
-    db.close()
-    print(f"✅ Seeded {len(products_data)} products successfully.")
-
+    print("Database seeded with 6 AI-curated authentic products successfully.")
 
 if __name__ == "__main__":
     seed()

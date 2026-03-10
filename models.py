@@ -1,25 +1,14 @@
-import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
+import datetime
+import uuid
 
-# --- DATABASE CONFIGURATION ---
-# Reads DATABASE_URL from environment (injected by Railway/Render automatically).
-# Falls back to local SQLite for development.
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./trendly.db")
+DATABASE_URL = "sqlite:///./trendly.db"
 
-# Railway & Render provide Postgres URLs starting with "postgres://"
-# but SQLAlchemy requires "postgresql://" — this fixes that automatically.
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# SQLite needs a special flag; PostgreSQL does not.
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
-
 
 class Product(Base):
     __tablename__ = "products"
@@ -35,11 +24,27 @@ class Product(Base):
     collection = Column(String, index=True)
     image_url = Column(String)
     affiliate_link = Column(String)
-    trend_score = Column(Float, default=0.0)  # AI Predicted trend score out of 100
+    trend_score = Column(Float, default=0.0) # AI Predicted trend score out of 100
     is_trending_now = Column(Boolean, default=False)
     predicted_next_month = Column(Boolean, default=False)
-    momentum = Column(String)  # e.g., "+24% 7d"
+    momentum = Column(String) # e.g., "+24% 7d"
 
+class TrendingProduct(Base):
+    """
+    Table for the discovery engine results.
+    """
+    __tablename__ = "trending_products"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_name = Column(String, index=True)
+    category = Column(String, index=True)
+    trend_score = Column(Float, index=True)
+    growth_metric = Column(Float)
+    image_url = Column(String)
+    affiliate_link = Column(String)
+    ai_insight = Column(String)
+    sources = Column(JSON) # jsonb equivalent in sqlite
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 def init_db():
     Base.metadata.create_all(bind=engine)

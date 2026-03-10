@@ -55,13 +55,12 @@ async def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    # In a full Postgres setup, we would ensure migrations are applied here
-    # from app.db.base import Base
-    # from app.db.session import engine
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
-    print(f"🚀 {settings.PROJECT_NAME} booting up on version 2.0.0...")
+    from app.models.sql_models import Base
+    from app.db.session import engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print(f"[START] {settings.PROJECT_NAME} booting up on version 2.0.0...")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print(f"🛑 {settings.PROJECT_NAME} shutting down gracefully...")
+    print(f"[STOP] {settings.PROJECT_NAME} shutting down gracefully...")

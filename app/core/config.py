@@ -22,12 +22,19 @@ class Settings(BaseSettings):
         "http://localhost:3000", 
         "https://trendly.ai",
         "https://trendly-frontend-rwu8.vercel.app",
-        "http://localhost:5173"
-    ]
-    
+        "http://localhost:5173"  # Added Vite local dev port just in case
+    ]    
     # Relational Database (SQLite for local, switch to PostgreSQL for Production)
-    # Using async sqlite driver
-    SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./trendly.db")
+    # Automatically converts postgres:// to postgresql+asyncpg:// for cloud compatibility
+    _raw_db_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./trendly.db")
+    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self._raw_db_url.startswith("postgres://"):
+            return self._raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif self._raw_db_url.startswith("postgresql://"):
+            return self._raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self._raw_db_url
     
     # Event Database (MongoDB)
     MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
