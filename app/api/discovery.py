@@ -64,7 +64,9 @@ async def get_trending_products(
         return payload
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"DB Error: {repr(e)}\n{tb}")
 
 
 @router.get("/products/{product_id}", response_model=TrendingProductResponse)
