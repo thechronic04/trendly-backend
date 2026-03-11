@@ -47,9 +47,13 @@ class Settings(BaseSettings):
     MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     
     # Cache & Worker (Redis)
-    # Accepts either a full redis:// URL (for Redis Cloud / Upstash) or just a hostname
+    # 1. Standard Redis (TCP)
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    
+    # 2. Upstash REST (Optimized for Serverless)
+    UPSTASH_REDIS_REST_URL: Optional[str] = os.getenv("UPSTASH_REDIS_REST_URL")
+    UPSTASH_REDIS_REST_TOKEN: Optional[str] = os.getenv("UPSTASH_REDIS_REST_TOKEN")
 
     @property
     def REDIS_CONNECTION_URL(self) -> str:
