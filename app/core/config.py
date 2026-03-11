@@ -22,11 +22,14 @@ class Settings(BaseSettings):
         "http://localhost:3000", 
         "https://trendly.ai",
         "https://trendly-frontend-rwu8.vercel.app",
-        "http://localhost:5173"  # Added Vite local dev port just in case
+        "https://trendly-frontend-rwu8-thechronic04s-projects.vercel.app",
+        "http://localhost:5173"
     ]    
+
     # Relational Database (SQLite for local, switch to PostgreSQL for Production)
     # Automatically converts postgres:// to postgresql+asyncpg:// for cloud compatibility
     _raw_db_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./trendly.db")
+
     
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
@@ -43,6 +46,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     
     # AI Engine Settings
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
     RE_TRAINING_INTERVAL_DAYS: int = 7
     ML_MODEL_PATH: str = "/app/ml/models/recommender.joblib"
     
@@ -52,6 +56,7 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
+        env_file = ".env"
 
 # Instantiate global settings
 settings = Settings()

@@ -1,49 +1,31 @@
 from typing import List, Dict
-from .trend_sources import GoogleTrendsAdapter, PinterestTrendsAdapter, EcommerceBestSellerAdapter
+from .trend_sources import ShopStyleAdapter, SephoraAdapter, EtsyAdapter, AmazonBeautyAdapter
 
 class TrendCollector:
     """
-    Orchestrates adapters to collect and aggregate trend signals.
+    Orchestrates adapters to collect trending products across categories.
     """
     def __init__(self):
         self.adapters = [
-            GoogleTrendsAdapter(),
-            PinterestTrendsAdapter(),
-            EcommerceBestSellerAdapter()
+            ShopStyleAdapter(),
+            SephoraAdapter(),
+            EtsyAdapter(),
+            AmazonBeautyAdapter()
         ]
 
-    async def collect_all(self) -> List[Dict]:
+    async def collect_products(self) -> List[Dict]:
         """
-        Call each adapter, normalize, and aggregate signals by keyword.
+        Call each adapter to get trending products.
         """
-        all_raw_signals = []
+        all_products = []
         for adapter in self.adapters:
-            signals = await adapter.fetch_signals()
-            all_raw_signals.extend(signals)
+            try:
+                products = await adapter.fetch_products()
+                all_products.extend(products)
+            except Exception as e:
+                print(f"Error fetching from {adapter.__class__.__name__}: {e}")
         
-        # Aggregate logic
-        aggregated = {}
-        for signal in all_raw_signals:
-            kw = signal["keyword"].lower()
-            if kw not in aggregated:
-                aggregated[kw] = {
-                    "keyword": kw,
-                    "sources": [signal["source"]],
-                    "signals": {
-                        "search_growth": signal["metric"].get("growth_rate", 0),
-                        "mention_count": signal["metric"].get("saves", signal["metric"].get("search_volume", 0)),
-                        "rank_signal": 1.0 / signal["metric"].get("sales_rank", 100) if "sales_rank" in signal["metric"] else 0
-                    }
-                }
-            else:
-                aggregated[kw]["sources"].append(signal["source"])
-                # Take max growth for simplicity
-                aggregated[kw]["signals"]["search_growth"] = max(
-                    aggregated[kw]["signals"]["search_growth"], 
-                    signal["metric"].get("growth_rate", 0)
-                )
-        
-        return list(aggregated.values())
+        return all_products
 
 # Singleton
 trend_collector = TrendCollector()

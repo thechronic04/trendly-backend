@@ -1,0 +1,1 @@
+from .trendingRoutes import router

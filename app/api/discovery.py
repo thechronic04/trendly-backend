@@ -1,97 +1,89 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.models.sql_models import Product
-from app.schemas.pydantic_schemas import ProductResponse, ProductAnalytics
+from app.models.sql_models import TrendingProduct
+from app.schemas.pydantic_schemas import TrendingProductResponse
 
 router = APIRouter()
 
-# --- DISCOVERY ENGINE: NEURAL MATCHING & TRENDS ---
+# --- Cache Infrastructure ---
+_cache: Dict[str, Any] = {}
+CACHE_TTL = 300 # 5 minutes
 
-@router.get("/trending", response_model=List[ProductResponse])
+def _is_cache_valid(key: str) -> bool:
+    if key not in _cache:
+        return False
+    entry = _cache[key]
+    return (datetime.utcnow().timestamp() - entry["timestamp"]) < CACHE_TTL
+
+@router.get("/trending", response_model=List[TrendingProductResponse])
 async def get_trending_products(
     db: AsyncSession = Depends(get_db), 
-    limit: int = 10,
+    limit: int = Query(20, ge=1, le=100),
     category: Optional[str] = None
 ):
     """
-    Asynchronous Product Discovery logic.
-    Optimized: Sorting by trend_score for 'What's Hot' feed.
+    Main Discovery Feed: Returns high-confidence trending items.
+    Optimized with memory caching for high concurrency.
     """
-    # Build query: select products sorted by trend_score descending
-    query = select(Product).order_by(Product.trend_score.desc())
-    
-    if category:
-        query = query.where(Product.category == category)
-    
-    # High-fidelity mock data fallback for seamless discovery until DB populated
-    mock_data = [
-        {
-            "id": 1,
-            "name": "Oversized Vintage Leather Moto Jacket",
-            "brand": "AllSaints",
-            "price": 24999.00,
-            "category": "clothing",
-            "sub_category": "Outerwear",
-            "image_url": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&q=80",
-            "affiliate_link": "https://www.allsaints.com/",
-            "trend_score": 95.8,
-            "predicted_next_month": True,
-            "analytics": {
-                "engagement_graph": [40, 55, 45, 70, 85, 95, 92],
-                "social_mentions": "124.5K",
-                "top_regions": ["New York", "London", "Tokyo"],
-                "sentiment_score": 92
-            }
-        },
-        {
-            "id": 4,
-            "name": "Oversized Streetwear Hoodie",
-            "brand": "Bonkers",
-            "price": 1599.00,
-            "category": "clothing",
-            "sub_category": "Knitwear",
-            "image_url": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=80",
-            "affiliate_link": "https://www.bonkerscorner.com/",
-            "trend_score": 98.4,
-            "predicted_next_month": True,
-            "analytics": {
-                "engagement_graph": [20, 35, 55, 80, 95, 98, 99],
-                "social_mentions": "256.2K",
-                "top_regions": ["Los Angeles", "Milan", "Shanghai"],
-                "sentiment_score": 96
-            }
-        },
-        {
-            "id": 9,
-            "name": "Soft Pinch Liquid Blush",
-            "brand": "Nykaa",
-            "price": 2499.00,
-            "category": "makeup",
-            "sub_category": "Tops",
-            "image_url": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80",
-            "affiliate_link": "https://www.nykaa.com/",
-            "trend_score": 98.2,
-            "predicted_next_month": True,
-            "analytics": {
-                "engagement_graph": [40, 50, 60, 70, 80, 90, 98],
-                "social_mentions": "182.4K",
-                "top_regions": ["Los Angeles", "London", "Sydney"],
-                "sentiment_score": 94
-            }
-        }
-    ]
-    
-    if category:
-        return [p for p in mock_data if p["category"] == category]
-    
-    return mock_data
+    cache_key = f"trending_{category}_{limit}"
+    if _is_cache_valid(cache_key):
+        return _cache[cache_key]["data"]
 
-@router.get("/products/{product_id}", response_model=ProductResponse)
-async def get_product_detail(product_id: int):
+    try:
+        query = select(TrendingProduct).order_by(TrendingProduct.trend_score.desc()).limit(limit)
+        
+        if category and category != 'all':
+            query = query.where(TrendingProduct.category == category)
+        
+        result = await db.execute(query)
+        products = result.scalars().all()
+        
+        # Ensure deep analytics is mocked if missing to prevent frontend crashes
+        for p in products:
+            if not p.analytics_json:
+                p.analytics_json = {
+                    "engagement_graph": [10, 20, 15, 25, 30, 25, 40],
+                    "social_mentions": f"{round(p.trend_score * 1.2, 1)}K",
+                    "top_regions": ["Global"],
+                    "sentiment_score": int(p.trend_score)
+                }
+
+        _cache[cache_key] = {"data": products, "timestamp": datetime.utcnow().timestamp()}
+        return products
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/products/{product_id}", response_model=TrendingProductResponse)
+async def get_product_detail(product_id: int, db: AsyncSession = Depends(get_db)):
     """Fetch deep-dive analytics for a single piece."""
-    # Logic mock for discovery engine analytics
-    # return product_record
-    pass
+    query = select(TrendingProduct).where(TrendingProduct.id == product_id)
+    result = await db.execute(query)
+    product = result.scalars().first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Mock data for analytics if not present
+    if not product.analytics_json:
+         product.analytics_json = {
+            "engagement_graph": [15, 25, 35, 45, 55, 65, 75],
+            "social_mentions": "82.4K",
+            "top_regions": ["Global"],
+            "sentiment_score": 85
+        }
+    return product
+
+@router.get("/sync-trends")
+async def trigger_trend_sync(db: AsyncSession = Depends(get_db)):
+    """
+    Automated endpoint to trigger the AI Trend Discovery Pipeline.
+    Used by Vercel Cron or external schedulers.
+    """
+    from app.services.trends.trend_pipeline import trend_pipeline
+    results = await trend_pipeline.run_pipeline(db)
+    # Clear cache since data changed
+    _cache.clear()
+    return {"message": f"Successfully processed {len(results)} viral trends.", "status": "success"}

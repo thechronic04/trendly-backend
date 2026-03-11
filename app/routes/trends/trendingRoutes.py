@@ -18,7 +18,7 @@ router = APIRouter()
 
 class TrendingProductResponse(BaseModel):
     id: int
-    product_name: str
+    title: str
     category: Optional[str] = None
     trend_score: Optional[float] = None
     growth_metric: Optional[str] = None
@@ -92,8 +92,20 @@ async def get_category_trending_products(
     return response
 
 
+@router.get("/trending-products/cron/sync-trends")
+async def trigger_trend_sync(db: AsyncSession = Depends(get_db)):
+    """
+    Vercel Cron Job endpoint to automatically run the AI pipeline.
+    This coordinates with the vercel.json configuration.
+    """
+    from app.services.trends.trend_pipeline import trend_pipeline
+    results = await trend_pipeline.run_pipeline(db)
+    return {"message": f"Successfully processed {len(results)} viral trends.", "status": "success"}
+
+
 @router.post("/trending-products/refresh")
 async def refresh_cache():
+
     """Clear the trending products cache to force fresh data on next request."""
     _cache.clear()
     return {"status": "cache_cleared", "message": "Next request will fetch fresh data."}

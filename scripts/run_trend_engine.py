@@ -52,7 +52,7 @@ async def run_discovery():
                 print(f"{'Product':<35} {'Category':<15} {'Score':<8} {'Growth':<10}")
                 print("-" * 68)
                 for r in sorted(results, key=lambda x: x["trend_score"], reverse=True):
-                    print(f"{r['product_name']:<35} {r['category']:<15} {r['trend_score']:<8} {r['growth_metric']:<10}")
+                    print(f"{r['title']:<35} {r['category']:<15} {r['trend_score']:<8} {r['growth_metric']:<10}")
                 print()
 
             # 4. Verify database population
@@ -73,7 +73,7 @@ async def run_discovery():
                 print("-" * 70)
                 for p in top_products:
                     sources = ", ".join(p.sources) if p.sources else "N/A"
-                    print(f"{p.id:<6} {p.product_name:<35} {p.trend_score:<8} {sources}")
+                    print(f"{p.id:<6} {p.title:<35} {p.trend_score:<8} {sources}")
 
         except Exception as e:
             print(f"\n[ERROR] Error in Trend Engine: {e}")

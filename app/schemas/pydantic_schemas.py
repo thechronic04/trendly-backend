@@ -48,12 +48,23 @@ class ProductBase(BaseModel):
     image_url: str
     affiliate_link: str
 
-class ProductResponse(ProductBase):
+class TrendingProductResponse(BaseModel):
     id: int
-    trend_score: float
-    predicted_next_month: bool
-    analytics: Optional[ProductAnalytics] = None
-    
+    title: str
+    category: Optional[str] = None
+    brand: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    affiliate_link: Optional[str] = None
+    affiliate_links: Optional[Dict[str, str]] = None
+    trend_score: Optional[float] = None
+    growth_metric: Optional[float] = None
+    ai_insight: Optional[str] = None
+    sources: Optional[List[str]] = None
+    analytics_json: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 
@@ -65,7 +76,7 @@ class EventLog(BaseModel):
     event_type: str  # e.g., 'CLICK', 'VIEW', 'SHARE'
     product_id: int
     session_id: str
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class SystemPerformance(BaseModel):

@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
+from datetime import datetime
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from app.core.security import create_access_token, verify_password, get_password_hash
+from app.core.security import create_access_token
 from app.schemas.pydantic_schemas import Token, UserCreate, UserResponse
 
 router = APIRouter()
@@ -8,7 +10,7 @@ router = APIRouter()
 # --- AUTH MODULE: SECURE IDENTITY MANAGEMENT ---
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm)):
     """
     Production-grade login with JWT issue.
     In a full setup, this would verify against the PostgreSQL 'users' table.
@@ -27,8 +29,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 @router.post("/signup", response_model=UserResponse)
 async def signup(user_in: UserCreate):
     """registers a new trendly explorer."""
-    # Logic for database persistence goes here
-    # In production: user = User(email=user_in.email, hashed_password=get_password_hash(user_in.password))
-    # await db.add(user)
-    # await db.commit()
-    pass # logic mock for now
+    # Mock return to satisfy type checking and response_model
+    return UserResponse(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
+        email=user_in.email,
+        full_name=user_in.full_name,
+        is_active=True,
+        role_id=3,
+        created_at=datetime.utcnow()
+    )

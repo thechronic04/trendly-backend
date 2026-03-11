@@ -1,66 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api import auth, discovery, tracker
-from app.routes.trends import trendingRoutes
+from app.api import auth, discovery, assistant
 from app.core.config import settings
 
-# --- MAIN APP: PRODUCTION-READY FASTAPI INSTANCE ---
+app = FastAPI(title="Trendly AI")
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="A multi-engine, scalable AI discovery platform for consumer fashion.",
-    version="2.0.0",
-    docs_url=f"{settings.API_V1_STR}/docs",
-    redoc_url=f"{settings.API_V1_STR}/redoc"
-)
-
-# Set up CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.ALLOWED_CORS_ORIGINS],
+    allow_origins=settings.ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- SCALABILITY: MONITORING & OBSERVABILITY ---
-
-# Prometheus instrumentation for real-time performance tracking
-# Instrumentator().instrument(app).bootstrap()
-
-
-# --- MODULE REGISTRATION (ROUTERS) ---
-
-app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Secure Auth"])
-app.include_router(discovery.router, prefix=f"{settings.API_V1_STR}/discovery", tags=["Discovery Engine"])
-app.include_router(tracker.router, prefix=f"{settings.API_V1_STR}/tracker", tags=["Neural Tracker"])
-app.include_router(trendingRoutes.router, prefix="/api", tags=["Trend Alerts"])
-
-
-@app.get("/health", tags=["Infrastructure"])
-async def health_check():
-    """System health check for cloud orchestration (Kubernetes/ECS)."""
-    return {
-        "status": "online",
-        "engines": {
-            "auth": "active",
-            "ai_discovery": "running",
-            "clickstream": "listening"
-        }
-    }
-
-# --- LIFECYCLE HANDLERS ---
-
 @app.on_event("startup")
 async def startup_event():
-    from app.models.sql_models import Base
-    from app.db.session import engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print(f"[START] {settings.PROJECT_NAME} booting up on version 2.0.0...")
+    from app.db.session import init_db
+    await init_db()
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    print(f"[STOP] {settings.PROJECT_NAME} shutting down gracefully...")
+app.include_router(auth.router, prefix="/api/auth", tags=["Secure Auth"])
+app.include_router(discovery.router, prefix="/api/discovery", tags=["Discovery Engine"])
+app.include_router(assistant.router, prefix="/api/assistant", tags=["AI Assistant"])
+
+@app.get("/health")
+async def health_check():
+    return {"status": "online"}

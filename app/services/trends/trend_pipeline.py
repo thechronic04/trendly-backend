@@ -41,7 +41,7 @@ class TrendPipeline:
             all_signals.extend(signals)
 
         # Aggregate by keyword
-        aggregated = {}
+        aggregated: Dict[str, Dict] = {}
         for signal in all_signals:
             kw = signal["keyword"].lower()
             if kw not in aggregated:
@@ -49,25 +49,26 @@ class TrendPipeline:
                     "keyword": kw,
                     "sources": [signal["source"]],
                     "signals": {
-                        "search_growth": signal.get("growth_rate", 0),
-                        "mention_count": signal.get("search_volume", 0),
+                        "search_growth": float(signal.get("growth_rate", 0)),
+                        "mention_count": int(signal.get("search_volume", 0)),
                         "rank_signal": 0.0
                     }
                 }
             else:
-                aggregated[kw]["sources"].append(signal["source"])
+                entry = aggregated[kw]
+                entry["sources"].append(signal["source"])
                 # Take the max growth for multi-source keywords
-                aggregated[kw]["signals"]["search_growth"] = max(
-                    aggregated[kw]["signals"]["search_growth"],
-                    signal.get("growth_rate", 0)
+                entry["signals"]["search_growth"] = max(
+                    entry["signals"]["search_growth"],
+                    float(signal.get("growth_rate", 0))
                 )
                 # Sum mention counts
-                aggregated[kw]["signals"]["mention_count"] += signal.get("search_volume", 0)
+                entry["signals"]["mention_count"] += int(signal.get("search_volume", 0))
                 # E-commerce rank signal
                 if signal["source"] == "ecommerce_bestseller":
-                    aggregated[kw]["signals"]["rank_signal"] = max(
-                        aggregated[kw]["signals"]["rank_signal"],
-                        signal.get("growth_rate", 0)
+                    entry["signals"]["rank_signal"] = max(
+                        entry["signals"]["rank_signal"],
+                        float(signal.get("growth_rate", 0))
                     )
 
         return list(aggregated.values())
@@ -139,7 +140,7 @@ class TrendPipeline:
 
                 # Step 6: Prepare result
                 results.append({
-                    "product_name": product_name,
+                    "title": product_name,
                     "category": category,
                     "trend_score": score,
                     "growth_metric": score_result["growth_metric"],
@@ -157,7 +158,7 @@ class TrendPipeline:
         for res in results:
             # Check for existing product → update instead of duplicate
             stmt = select(TrendingProduct).where(
-                TrendingProduct.product_name == res["product_name"]
+                TrendingProduct.title == res["title"]
             )
             existing_result = await db.execute(stmt)
             existing = existing_result.scalar_one_or_none()
@@ -170,17 +171,31 @@ class TrendPipeline:
                 existing.affiliate_link = res["affiliate_link"]
                 existing.image_url = res["image_url"]
                 existing.created_at = datetime.utcnow()
+                # Update analytics with fresh scores
+                existing.analytics_json = {
+                    "engagement_graph": [round(res["trend_score"] * (0.5 + i/10), 1) for i in range(7)],
+                    "social_mentions": f"{round(res['trend_score'] * 1.5, 1)}K",
+                    "top_regions": ["New York", "London", "Tokyo", "Seoul"],
+                    "sentiment_score": int(res["trend_score"])
+                }
             else:
                 db_trending = TrendingProduct(
-                    product_name=res["product_name"],
+                    title=res["title"],
                     category=res["category"],
                     trend_score=res["trend_score"],
                     growth_metric=res["growth_metric"],
                     image_url=res["image_url"],
-                    affiliate_link=res["affiliate_link"],
+                    affiliate_link=res["affiliate_link"], # Fallback
+                    affiliate_links={"primary": res["affiliate_link"]}, # New JSON field
                     ai_insight=res["ai_insight"],
                     sources=res["sources"],
-                    source_platform=", ".join(res["sources"])
+                    source_platform=", ".join(res["sources"]),
+                    analytics_json={
+                        "engagement_graph": [round(res["trend_score"] * (0.5 + i/10), 1) for i in range(7)],
+                        "social_mentions": f"{round(res['trend_score'] * 1.5, 1)}K",
+                        "top_regions": ["New York", "London", "Tokyo", "Seoul"],
+                        "sentiment_score": int(res["trend_score"])
+                    }
                 )
                 db.add(db_trending)
                 persisted_count += 1

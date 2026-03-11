@@ -1,63 +1,65 @@
-import datetime
-import random
+import os
+import httpx
+import asyncio
 from typing import List, Dict
 
-class TrendSourceAdapter:
-    """Base adapter class for trend signals."""
-    async def fetch_signals(self) -> List[Dict]:
+class ProductSourceAdapter:
+    """Base adapter class for trending products."""
+    async def fetch_products(self) -> List[Dict]:
         raise NotImplementedError
 
-class GoogleTrendsAdapter(TrendSourceAdapter):
-    """Adapter for Google Trends signals."""
-    async def fetch_signals(self) -> List[Dict]:
-        # Simulated signals for makeup and fashion
-        keywords = [
-            "lip oil", "oversized hoodie", "clean girl makeup", 
-            "vintage leather jacket", "niacinamide serum", "baggy denim"
-        ]
-        signals = []
-        for kw in keywords:
-            signals.append({
-                "keyword": kw,
-                "source": "google_trends",
-                "metric": {
-                    "search_volume": random.randint(50000, 150000),
-                    "growth_rate": random.uniform(0.1, 0.9)
-                },
-                "timestamp": datetime.datetime.utcnow().isoformat()
-            })
-        return signals
+class ShopStyleAdapter(ProductSourceAdapter):
+    """Adapter for ShopStyle (Fashion)."""
+    async def fetch_products(self) -> List[Dict]:
+        api_key = os.getenv("SHOPSTYLE_API_KEY")
+        if not api_key:
+            # Fallback to simulated trending fashion
+            return [{
+                "id": "ss1", "title": "Oversized Cashmere Sweater", "brand": "Everlane",
+                "image_url": "https://picsum.photos/seed/fashion1/400/600", "price": 120.0,
+                "description": "Luxurious oversized sweater.", "category": "fashion"
+            }]
+        
+        url = "https://api.shopstyle.com/api/v2/products"
+        params = {"cat": "women", "sort": "trending", "limit": 100, "api_key": api_key}
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, params=params)
+            products = resp.json().get("products", [])
+        return [{
+            "id": str(p["id"]), "title": p["name"], "brand": p.get("brand", {}).get("name", ""),
+            "image_url": p["image"]["sizes"]["Large"]["url"], "price": p["price"],
+            "description": p.get("description", ""), "category": "fashion"
+        } for p in products]
 
-class PinterestTrendsAdapter(TrendSourceAdapter):
-    """Adapter for Pinterest trending searches."""
-    async def fetch_signals(self) -> List[Dict]:
-        keywords = ["coquette aesthetic", "balletcore", "strawberry makeup", "quiet luxury"]
-        signals = []
-        for kw in keywords:
-            signals.append({
-                "keyword": kw,
-                "source": "pinterest",
-                "metric": {
-                    "saves": random.randint(10000, 50000),
-                    "growth_rate": random.uniform(0.2, 0.8)
-                },
-                "timestamp": datetime.datetime.utcnow().isoformat()
-            })
-        return signals
+class SephoraAdapter(ProductSourceAdapter):
+    """Adapter for Sephora (Makeup)."""
+    async def fetch_products(self) -> List[Dict]:
+        # Sephora API is often restricted, usually requires scraping or partner access
+        return [{
+            "id": "sep1", "title": "Gloss Bomb Universal Lip Luminizer", "brand": "Fenty Beauty",
+            "image_url": "https://picsum.photos/seed/makeup1/400/600", "price": 21.0,
+            "description": "The ultimate gotta-have-it lip gloss.", "category": "makeup"
+        }]
 
-class EcommerceBestSellerAdapter(TrendSourceAdapter):
-    """Adapter for Amazon/Ecommerce best sellers."""
-    async def fetch_signals(self) -> List[Dict]:
-        keywords = ["matte lipstick", "puffy tote bag", "claw clip", "hydrocolloid patches"]
-        signals = []
-        for kw in keywords:
-            signals.append({
-                "keyword": kw,
-                "source": "ecommerce_bestseller",
-                "metric": {
-                    "sales_rank": random.randint(1, 100),
-                    "review_velocity": random.uniform(0.5, 2.0)
-                },
-                "timestamp": datetime.datetime.utcnow().isoformat()
-            })
-        return signals
+class EtsyAdapter(ProductSourceAdapter):
+    """Adapter for Etsy (Accessories)."""
+    async def fetch_products(self) -> List[Dict]:
+        api_key = os.getenv("ETSY_API_KEY")
+        if not api_key:
+            return [{
+                "id": "etsy1", "title": "Personalized Gold Name Necklace", "brand": "CustomJewels",
+                "image_url": "https://picsum.photos/seed/acc1/400/600", "price": 45.0,
+                "description": "Handmade personalized necklace.", "category": "accessories"
+            }]
+        # Etsy API logic here...
+        return []
+
+class AmazonBeautyAdapter(ProductSourceAdapter):
+    """Adapter for Amazon Beauty (Skincare)."""
+    async def fetch_products(self) -> List[Dict]:
+        # PA-API logic or scraping
+        return [{
+            "id": "amz1", "title": "CeraVe Hydrating Facial Cleanser", "brand": "CeraVe",
+            "image_url": "https://picsum.photos/seed/skin1/400/600", "price": 15.99,
+            "description": "Daily face wash with hyaluronic acid.", "category": "skincare"
+        }]

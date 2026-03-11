@@ -36,14 +36,17 @@ class TrendingProduct(Base):
     __tablename__ = "trending_products"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_name = Column(String, index=True)
-    category = Column(String, index=True)
+    title = Column(String, index=True)
+    category = Column(String, index=True) # fashion|makeup|accessories|skincare
+    brand = Column(String, index=True)
+    description = Column(String)
+    price = Column(Float)
+    image_url = Column(String)
+    affiliate_links = Column(JSON) # Store dict of networks: links
     trend_score = Column(Float, index=True)
     growth_metric = Column(Float)
-    image_url = Column(String)
-    affiliate_link = Column(String)
     ai_insight = Column(String)
-    sources = Column(JSON) # jsonb equivalent in sqlite
+    sources = Column(JSON)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 def init_db():

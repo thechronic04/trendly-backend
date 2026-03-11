@@ -64,22 +64,26 @@ class Product(Base):
 
 class TrendingProduct(Base):
     """
-    SECTION 6 — DATABASE EXTENSION
     Storage for dynamically generated AI trends.
     Supports the AI Discovery Pipeline with score, insights, and multi-source tracking.
     """
     __tablename__ = "trending_products"
     
     id = Column(Integer, primary_key=True, index=True)
-    product_name = Column(String(255), nullable=False, index=True)
+    title = Column(String(255), nullable=False, index=True)
     category = Column(String(50), index=True)
-    trend_score = Column(Float, index=True)
-    growth_metric = Column(String(50))
+    brand = Column(String(100), index=True)
+    description = Column(String(2048))
+    price = Column(Float)
     image_url = Column(String(1024))
     affiliate_link = Column(String(2048))
+    affiliate_links = Column(JSON) # Store dict of networks: links
+    trend_score = Column(Float, index=True)
+    growth_metric = Column(Float)
     source_platform = Column(String(100))
-    ai_insight = Column(String(2048))  # AI-generated contextual insight text
-    sources = Column(JSON)  # Multi-platform source attribution (JSONB equivalent)
+    ai_insight = Column(String(2048))
+    sources = Column(JSON)
+    analytics_json = Column(JSON) # To support frontend deep analytics
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
