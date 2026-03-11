@@ -40,9 +40,9 @@ async def chat_with_assistant(request: ChatRequest, db: AsyncSession = Depends(g
     prods_makeup = res_makeup.scalars().all()
     
     context = "### CURRENT LIVE TREND DATA ###\n"
-    context += "Top Overall: " + ", ".join([f"{p.name} ({p.trend_score} momentum)" for p in prods_top]) + "\n"
-    context += "Viral Fashion: " + ", ".join([f"{p.name}" for p in prods_fashion]) + "\n"
-    context += "Viral Beauty: " + ", ".join([f"{p.name}" for p in prods_makeup]) + "\n"
+    context += "Top Overall: " + ", ".join([f"{p.title} ({p.trend_score} momentum)" for p in prods_top]) + "\n"
+    context += "Viral Fashion: " + ", ".join([f"{p.title}" for p in prods_fashion]) + "\n"
+    context += "Viral Beauty: " + ", ".join([f"{p.title}" for p in prods_makeup]) + "\n"
     context += "##############################"
     
     # 2. Get response from Gemini

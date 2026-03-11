@@ -3,7 +3,7 @@ Trend Pipeline — End-to-end orchestrator for the AI Discovery Engine.
 Flow: Collect → Extract → Classify → Score → Enrich → Persist
 """
 from typing import List, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -170,7 +170,7 @@ class TrendPipeline:
                 existing.sources = res["sources"]
                 existing.affiliate_link = res["affiliate_link"]
                 existing.image_url = res["image_url"]
-                existing.created_at = datetime.utcnow()
+                existing.created_at = datetime.now(timezone.utc)
                 # Update analytics with fresh scores
                 existing.analytics_json = {
                     "engagement_graph": [round(res["trend_score"] * (0.5 + i/10), 1) for i in range(7)],
@@ -204,7 +204,7 @@ class TrendPipeline:
         print(f"   [OK] Persisted {persisted_count} new items, updated {len(results) - persisted_count} existing")
 
         # Step 8: Cleanup expired trends (> 7 days)
-        threshold = datetime.utcnow() - timedelta(days=7)
+        threshold = datetime.now(timezone.utc) - timedelta(days=7)
         cleanup_stmt = delete(TrendingProduct).where(
             TrendingProduct.created_at < threshold
         )

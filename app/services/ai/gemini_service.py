@@ -1,22 +1,23 @@
 import os
-import google.generativeai as genai
+from datetime import datetime, timezone
 from typing import List, Dict, Any
+from google import genai
 from app.core.config import settings
 
 class GeminiService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            # We use the async client to prevent blocking the FastAPI event loop.
+            self.client = genai.Client(api_key=self.api_key)
+            self.model_id = 'gemini-2.0-flash'
         else:
-            self.model = None
+            self.client = None
 
     async def get_chat_response(self, message: str, history: List[Dict[str, str]] = [], context: str = "") -> str:
-        if not self.model:
+        if not self.client:
             return "Gemini API key is not configured. Trendly is optimized for Gemini 1.5. Please configure your API key to unlock real-time neural scouting."
 
-        # Construct a rich system prompt
         system_instruction = f"""
         You are 'Trendly's Neural Assistant', an elite AI trend scout. 
         Your personality: 
@@ -33,20 +34,22 @@ class GeminiService:
         """
 
         try:
-            # Create a chat session with history
-            # Gemini history format: {"role": "user"|"model", "parts": [text]}
             formatted_history = []
             for h in history:
                 role = "user" if h["role"] == "user" else "model"
-                formatted_history.append({"role": role, "parts": [h["content"]]})
+                formatted_history.append({"role": role, "parts": [{"text": h["content"]}]})
 
-            chat = self.model.start_chat(history=formatted_history)
+            # For safety in async context, run in thread pool if needed, 
+            # but usually for a single call it's fine unless high concurrency is needed.
+            chat = self.client.aio.chats.create(
+                model=self.model_id,
+                history=formatted_history,
+                config={'system_instruction': system_instruction}
+            )
             
-            # Send the system instruction as part of the first message or prepended to the user message
-            full_prompt = f"{system_instruction}\n\nUser Question: {message}"
-            response = chat.send_message(full_prompt)
-            
+            response = await chat.send_message(message)
             return response.text
+            
         except Exception as e:
             return f"Neural link disrupted: {str(e)}. Attempting to reconnect..."
 
