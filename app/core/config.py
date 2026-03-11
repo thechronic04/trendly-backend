@@ -32,9 +32,9 @@ class Settings(BaseSettings):
 
     # Relational Database (SQLite for local, switch to PostgreSQL for Production)
     # Automatically converts postgres:// to postgresql+asyncpg:// for cloud compatibility
-    _raw_db_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./trendly.db")
+    _fallback_db = "sqlite+aiosqlite:////tmp/trendly.db" if os.getenv("VERCEL") else "sqlite+aiosqlite:///./trendly.db"
+    _raw_db_url: str = os.getenv("DATABASE_URL", _fallback_db)
 
-    
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self._raw_db_url.startswith("postgres://"):
