@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 
@@ -12,10 +13,12 @@ class Settings(BaseSettings):
     # System Info
     PROJECT_NAME: str = "Trendly.Ai Backend"
     API_V1_STR: str = "/api/v1"
+    DATABASE_URL: Optional[str] = None  # Allow it to be picked from .env
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
     # Security Configuration
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "trendly-ai-prod-key-7728786271")
+    # In production, ALWAYS set SECRET_KEY via environment variable. 
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "trendly-ai-fallback-secure-key-9283746501")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     ALLOWED_CORS_ORIGINS: List[str] = [
@@ -23,7 +26,8 @@ class Settings(BaseSettings):
         "https://trendly.ai",
         "https://trendly-frontend-rwu8.vercel.app",
         "https://trendly-frontend-rwu8-thechronic04s-projects.vercel.app",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
     ]    
 
     # Relational Database (SQLite for local, switch to PostgreSQL for Production)
@@ -43,7 +47,15 @@ class Settings(BaseSettings):
     MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     
     # Cache & Worker (Redis)
+    # Accepts either a full redis:// URL (for Redis Cloud / Upstash) or just a hostname
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+
+    @property
+    def REDIS_CONNECTION_URL(self) -> str:
+        if self.REDIS_URL:
+            return self.REDIS_URL
+        return f"redis://{self.REDIS_HOST}"
     
     # AI Engine Settings
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
