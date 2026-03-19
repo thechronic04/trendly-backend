@@ -10,7 +10,7 @@ class GeminiService:
         if self.api_key:
             # We use the async client to prevent blocking the FastAPI event loop.
             self.client = genai.Client(api_key=self.api_key)
-            self.model_id = 'gemini-2.0-flash'
+            self.model_id = 'gemini-1.5-flash'
         else:
             self.client = None
 
