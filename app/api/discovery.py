@@ -31,7 +31,7 @@ def _fill_analytics(product: TrendingProduct) -> dict:
 @router.get("/trending", response_model=List[TrendingProductResponse])
 async def get_trending_products(
     db: AsyncSession = Depends(get_db),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=1200),
     category: Optional[str] = None,
 ):
     """
