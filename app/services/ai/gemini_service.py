@@ -10,13 +10,13 @@ class GeminiService:
         if self.api_key:
             # We use the async client to prevent blocking the FastAPI event loop.
             self.client = genai.Client(api_key=self.api_key)
-            self.model_id = 'gemini-1.5-flash'
+            self.model_id = 'gemini-2.5-flash'
         else:
             self.client = None
 
     async def get_chat_response(self, message: str, history: List[Dict[str, str]] = [], context: str = "") -> str:
         if not self.client:
-            return "Gemini API key is not configured. Trendly is optimized for Gemini 1.5. Please configure your API key to unlock real-time neural scouting."
+            return "Gemini API key is not configured. Trendly is optimized for Gemini 2.5. Please configure your API key to unlock real-time neural scouting."
 
         system_instruction = f"""
         You are 'Trendly's Neural Assistant', an elite AI trend scout. 
